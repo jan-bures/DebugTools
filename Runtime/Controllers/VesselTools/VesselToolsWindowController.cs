@@ -119,6 +119,7 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             _scaledSolverIteration!.value = PhysicsSettings.ENABLE_SCALED_SOLVER_ITERATION;
             _multiJoints!.value = PersistentProfileManager.MultiJointsEnabled;
             _jointsEnabled!.value = !PhysicsSettings.DEBUG_DISABLE_JOINTS;
+            _showJoints?.SetValueWithoutNotify(JointDebugState.ShowMarkers);
             _ignoreValueChanged = false;
 
             _isPhysicsForceShowing = Game.PhysicsForceDisplaySystem.IsDisplayed;
@@ -186,6 +187,10 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             _jointsEnabled.RegisterValueChangedCallback(OnJointsEnabledChanged);
 
             _showJoints = RootElement.Q<Toggle>("show-joints");
+            _showJoints.SetValueWithoutNotify(JointDebugState.ShowMarkers);
+            _showJoints.RegisterValueChangedCallback(OnShowJointsChanged);
+            JointDebugState.Changed -= OnJointDebugStateChanged;
+            JointDebugState.Changed += OnJointDebugStateChanged;
 
             // Buoyancy
             _showPartsBounds = RootElement.Q<Toggle>("parts-bounds");
@@ -213,6 +218,11 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             _controlState = RootElement.Q<Label>("control-state");
 
             _initialized = true;
+        }
+
+        private void OnDisable()
+        {
+            JointDebugState.Changed -= OnJointDebugStateChanged;
         }
 
         private void LoadPrefabs()
@@ -313,7 +323,6 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             
             if (!IsWindowOpen) return;
             
-            UpdateJointVisualizations();
             UpdateVesselsCoM();
 
             if (_state == GameState.FlightView || _state == GameState.Map3DView)
@@ -896,6 +905,17 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             }
 
             Game.UniverseView.PhysicsSpace.FloatingOrigin.IsPendingForceSnap = true;
+        }
+
+        private void OnShowJointsChanged(ChangeEvent<bool> evt)
+        {
+            if (_ignoreValueChanged) return;
+            JointDebugState.SetShowMarkers(evt.newValue);
+        }
+
+        private void OnJointDebugStateChanged()
+        {
+            _showJoints?.SetValueWithoutNotify(JointDebugState.ShowMarkers);
         }
 
         private void UpdateJointVisualizations()

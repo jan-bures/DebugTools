@@ -11,6 +11,9 @@ namespace DebugTools.Utils
 {
     public static class UITKHelper
     {
+        private const float MinResizableWindowWidth = 240f;
+        private const float MinResizableWindowHeight = 160f;
+
         public static void LoadUxml(string name, Action<VisualTreeAsset> callback)
         {
             GameManager.Instance.Assets.Load($"Assets/Modules/DebugTools/Assets/UI/{name}.uxml", callback);
@@ -28,6 +31,13 @@ namespace DebugTools.Utils
                 {
                     IsMovingEnabled = true,
                     CheckScreenBounds = true
+                },
+                ResizeOptions = new ResizeOptions
+                {
+                    IsResizingEnabled = true,
+                    CheckScreenBounds = true,
+                    MinWidth = MinResizableWindowWidth,
+                    MinHeight = MinResizableWindowHeight
                 }
             };
 

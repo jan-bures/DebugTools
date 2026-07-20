@@ -5,55 +5,52 @@
             <ui:Label text="Joints Tools" />
             <ui:Button text="×" name="close-button" />
         </ui:VisualElement>
-        <ui:VisualElement name="content" class="data" style="max-height: 500px;">
-            <ui:VisualElement name="vessel" class="sub-data">
-                <ui:Label tabindex="-1" text="Kerbal K-1" display-tooltip-when-elided="true" name="vessel-name" style="max-width: 170px; overflow: hidden; text-overflow: ellipsis; -unity-font-style: bold;" />
-                <ui:VisualElement class="divider" />
-                <ui:Label tabindex="-1" text="PhysicsMode: &lt;b&gt;RigidBody&lt;/b&gt;" display-tooltip-when-elided="true" name="physics-mode" enable-rich-text="true" />
-                <ui:VisualElement class="divider" />
-                <ui:Label tabindex="-1" text="Situation: &lt;b&gt;SubOrbital&lt;/b&gt;" display-tooltip-when-elided="true" name="situation" />
+        <ui:VisualElement name="content" class="content">
+            <ui:VisualElement name="summary" class="panel">
+                <ui:Label tabindex="-1" text="No active vessel" display-tooltip-when-elided="true" enable-rich-text="true" name="vessel-name" class="summary-title" />
+                <ui:Label tabindex="-1" text="Physics: n/a" display-tooltip-when-elided="true" enable-rich-text="true" name="physics-summary" class="summary-line" />
+                <ui:Label tabindex="-1" text="Joints: n/a" display-tooltip-when-elided="true" enable-rich-text="true" name="joint-summary" class="summary-line" />
+                <ui:Label tabindex="-1" text="Stress: n/a" display-tooltip-when-elided="true" enable-rich-text="true" name="stress-summary" class="summary-line" />
             </ui:VisualElement>
-            <ui:VisualElement name="counts" class="sub-data">
-                <ui:Label tabindex="-1" text="Parts: &lt;b&gt;125&lt;/b&gt;" display-tooltip-when-elided="true" name="parts-count" />
-                <ui:VisualElement class="divider" />
-                <ui:Label tabindex="-1" text="Joints: &lt;b&gt;512&lt;/b&gt; parts - &lt;b&gt;125&lt;/b&gt; reinf." display-tooltip-when-elided="true" name="joints-count" />
-                <ui:VisualElement class="divider" />
-                <ui:Label tabindex="-1" text="RigidBodies: &lt;b&gt;125&lt;/b&gt;" display-tooltip-when-elided="true" name="physx-rb-count" />
+
+            <ui:VisualElement name="filters" class="panel row-wrap">
+                <ui:Toggle label="Active Vessel Only" name="active-vessel-only" class="toggle filter-toggle" />
+                <ui:Toggle label="Analytical" name="show-analytical" class="toggle filter-toggle" />
+                <ui:Toggle label="Legacy PhysX/Virtual" name="show-legacy" class="toggle filter-toggle wide" />
+                <ui:Toggle label="Markers" name="show-markers" class="toggle filter-toggle" />
+                <ui:Toggle label="Stress Gauges" name="show-stress-gauges" class="toggle filter-toggle" />
+                <ui:DropdownField label="Sort" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="sort-mode" class="sort-mode" />
+                <ui:Button text="Clear Selection" name="clear-selection" class="action-button" />
             </ui:VisualElement>
-            <ui:VisualElement name="rigidity" class="sub-data">
-                <ui:Label tabindex="-1" text="Rigidity: &lt;b&gt;1.5&lt;/b&gt;" display-tooltip-when-elided="true" name="rigidity-value" />
-                <ui:VisualElement class="divider" />
-                <ui:Label tabindex="-1" text="Stack Rigidity: &lt;b&gt;0.8&lt;/b&gt;" display-tooltip-when-elided="true" name="stack-rigidity-value" />
-                <ui:VisualElement class="divider" />
-                <ui:Label tabindex="-1" text="Surface Rigidity: &lt;b&gt;1.5&lt;/b&gt;" display-tooltip-when-elided="true" name="surface-rigidity-value" />
+
+            <ui:VisualElement name="settings" class="panel settings">
+                <ui:Label tabindex="-1" text="RigidBody Mode: n/a" display-tooltip-when-elided="true" enable-rich-text="true" name="mode-value" class="setting-label" />
+                <ui:Button text="Pack" display-tooltip-when-elided="true" name="set-packed" class="small-button" />
+                <ui:Button text="Unpack" display-tooltip-when-elided="true" name="set-unpacked" class="small-button" />
+                <ui:Label tabindex="-1" text="Rigidity: &lt;b&gt;0.0&lt;/b&gt;" display-tooltip-when-elided="true" enable-rich-text="true" name="rigidity-value" class="setting-label" />
+                <ui:TextField picking-mode="Ignore" value="0.0" name="joint-rigidity-input" class="number-input" />
+                <ui:Button text="Set" display-tooltip-when-elided="true" name="set-joint-rigidity" class="tiny-button" />
+                <ui:Label tabindex="-1" text="Stack: &lt;b&gt;0.0&lt;/b&gt;" display-tooltip-when-elided="true" enable-rich-text="true" name="stack-rigidity-value" class="setting-label" />
+                <ui:TextField picking-mode="Ignore" value="0.0" name="stack-rigidity-input" class="number-input" />
+                <ui:Button text="Set" display-tooltip-when-elided="true" name="set-stack-rigidity" class="tiny-button" />
+                <ui:Label tabindex="-1" text="Surface: &lt;b&gt;0.0&lt;/b&gt;" display-tooltip-when-elided="true" enable-rich-text="true" name="surface-rigidity-value" class="setting-label" />
+                <ui:TextField picking-mode="Ignore" value="0.0" name="surface-rigidity-input" class="number-input" />
+                <ui:Button text="Set" display-tooltip-when-elided="true" name="set-surface-rigidity" class="tiny-button" />
             </ui:VisualElement>
-            <ui:VisualElement name="mode" class="sub-data">
-                <ui:Label tabindex="-1" text="RigidBody Mode: &lt;b&gt;Packed&lt;/b&gt;" display-tooltip-when-elided="true" name="mode-value" />
-                <ui:VisualElement name="mode-buttons" style="background-color: rgba(0, 0, 0, 0); flex-direction: row; width: 50%; padding-right: 10px; justify-content: space-between;">
-                    <ui:Button text="Pack" display-tooltip-when-elided="true" name="set-packed" style="width: 45%;" />
-                    <ui:Button text="Unpack" display-tooltip-when-elided="true" name="set-unpacked" style="width: 45%;" />
-                </ui:VisualElement>
+
+            <ui:VisualElement name="legacy-settings" class="panel row-wrap compact">
+                <ui:Toggle label="Multi Joints" name="multi-joints" class="toggle filter-toggle" />
+                <ui:Toggle label="Inertia Tensor Fix" name="inertia-tensor-fix" class="toggle filter-toggle wide" />
+                <ui:Toggle label="Extra Joints" name="extra-joints" class="toggle filter-toggle" />
+                <ui:DropdownField label="Extra Mode" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="extra-joints-mode" class="extra-mode" />
             </ui:VisualElement>
-            <ui:VisualElement name="joint-rigidity" class="sub-data" style="background-color: rgba(0, 0, 0, 0); padding-right: 10px;">
-                <ui:TextField picking-mode="Ignore" label="Joint Rigidity" value="0.0" name="joint-rigidity-input" style="max-width: 75%; padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: 0;" />
-                <ui:Button text="Set" display-tooltip-when-elided="true" name="set-joint-rigidity" style="width: 20%;" />
+
+            <ui:VisualElement name="joint-header" class="joint-header">
+                <ui:Label text="Type" class="header-kind" />
+                <ui:Label text="Connection" class="header-name" />
+                <ui:Label text="Node / Load" class="header-node" />
             </ui:VisualElement>
-            <ui:VisualElement name="stack-rigidity" class="sub-data" style="background-color: rgba(0, 0, 0, 0); padding-right: 10px;">
-                <ui:TextField picking-mode="Ignore" label="Stack Rigidity" value="0.0" name="stack-rigidity-input" style="max-width: 75%; padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: 0;" />
-                <ui:Button text="Set" display-tooltip-when-elided="true" name="set-stack-rigidity" style="width: 20%;" />
-            </ui:VisualElement>
-            <ui:VisualElement name="surface-rigidity" class="sub-data" style="background-color: rgba(0, 0, 0, 0); padding-right: 10px;">
-                <ui:TextField picking-mode="Ignore" label="Surface Rigidity" value="0.0" name="surface-rigidity-input" style="max-width: 75%; padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: 0;" />
-                <ui:Button text="Set" display-tooltip-when-elided="true" name="set-surface-rigidity" style="width: 20%;" />
-            </ui:VisualElement>
-            <ui:VisualElement name="toggles" class="sub-data" style="background-color: rgba(0, 0, 0, 0); padding-right: 10px;">
-                <ui:Toggle label="Multi Joints" name="multi-joints" class="toggle" style="width: 35%;" />
-                <ui:Toggle label="Inertia Tensor Fix" name="inertia-tensor-fix" class="toggle" style="width: 40%;" />
-            </ui:VisualElement>
-            <ui:VisualElement name="extra-joints" class="sub-data" style="background-color: rgba(0, 0, 0, 0); padding-right: 10px;">
-                <ui:Toggle label="Extra Joints" name="extra-joints" class="toggle" style="width: 35%; max-width: 35%; min-width: 35%;" />
-                <ui:DropdownField label="Extra Joints Mode" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="extra-joints-mode" style="margin-left: 0; margin-right: 0; margin-top: 0; margin-bottom: 0; max-width: 60%;" />
-            </ui:VisualElement>
+            <ui:ScrollView scroll-deceleration-rate="0.135" elasticity="0.1" name="joint-rows" class="joint-rows" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
