@@ -126,6 +126,17 @@
     margin-right: 2px;
 }
 
+.stress-override-slider {
+    width: 300px;
+    margin-right: 8px;
+}
+
+.stress-override-note {
+    margin-left: 8px;
+    font-size: 10px;
+    color: rgb(154, 164, 182);
+}
+
 .unity-text-field__input {
     padding-left: 2px;
     padding-right: 2px;

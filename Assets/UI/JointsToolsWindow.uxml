@@ -45,6 +45,15 @@
                 <ui:DropdownField label="Extra Mode" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="extra-joints-mode" class="extra-mode" />
             </ui:VisualElement>
 
+            <ui:VisualElement name="stress-override" class="panel row-wrap compact">
+                <ui:Slider label="Presentation Stress" low-value="0" high-value="1" value="0.85" show-input-field="true" name="stress-override-value" class="stress-override-slider" />
+                <ui:Button text="Set Selected" name="set-selected-stress" class="action-button" />
+                <ui:Button text="Set All" name="set-all-stress" class="small-button" />
+                <ui:Button text="Clear Selected" name="clear-selected-stress" class="action-button" />
+                <ui:Button text="Clear All" name="clear-all-stress" class="small-button" />
+                <ui:Label text="Presentation only; cannot break or alter physics" class="stress-override-note" />
+            </ui:VisualElement>
+
             <ui:VisualElement name="joint-header" class="joint-header">
                 <ui:Label text="Type" class="header-kind" />
                 <ui:Label text="Connection" class="header-name" />

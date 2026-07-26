@@ -41,6 +41,7 @@ namespace DebugTools.Runtime.Controllers
         private TextField _jointRigidityInput;
         private TextField _stackRigidityInput;
         private TextField _surfaceRigidityInput;
+        private Slider _stressOverrideValue;
 
         private ScrollView _rowsView;
         private Button _setPacked;
@@ -49,6 +50,10 @@ namespace DebugTools.Runtime.Controllers
         private Button _setStackRigidity;
         private Button _setSurfaceRigidity;
         private Button _clearSelection;
+        private Button _setSelectedStress;
+        private Button _setAllStress;
+        private Button _clearSelectedStress;
+        private Button _clearAllStress;
 
         private readonly List<JointRowController> _rows = new();
         private readonly List<JointRowModel> _models = new();
@@ -93,6 +98,7 @@ namespace DebugTools.Runtime.Controllers
             _jointRigidityInput = RootElement.Q<TextField>("joint-rigidity-input");
             _stackRigidityInput = RootElement.Q<TextField>("stack-rigidity-input");
             _surfaceRigidityInput = RootElement.Q<TextField>("surface-rigidity-input");
+            _stressOverrideValue = RootElement.Q<Slider>("stress-override-value");
 
             _setPacked = RootElement.Q<Button>("set-packed");
             _setUnpacked = RootElement.Q<Button>("set-unpacked");
@@ -100,6 +106,10 @@ namespace DebugTools.Runtime.Controllers
             _setStackRigidity = RootElement.Q<Button>("set-stack-rigidity");
             _setSurfaceRigidity = RootElement.Q<Button>("set-surface-rigidity");
             _clearSelection = RootElement.Q<Button>("clear-selection");
+            _setSelectedStress = RootElement.Q<Button>("set-selected-stress");
+            _setAllStress = RootElement.Q<Button>("set-all-stress");
+            _clearSelectedStress = RootElement.Q<Button>("clear-selected-stress");
+            _clearAllStress = RootElement.Q<Button>("clear-all-stress");
 
             _activeVesselOnly.RegisterValueChangedCallback(OnActiveVesselOnlyChanged);
             _showAnalytical.RegisterValueChangedCallback(OnShowAnalyticalChanged);
@@ -122,6 +132,10 @@ namespace DebugTools.Runtime.Controllers
             _setStackRigidity.clicked += SetStackJointRigidity;
             _setSurfaceRigidity.clicked += SetSurfaceJointRigidity;
             _clearSelection.clicked += JointDebugState.ClearSelection;
+            _setSelectedStress.clicked += SetSelectedStressOverride;
+            _setAllStress.clicked += SetAllStressOverride;
+            _clearSelectedStress.clicked += ClearSelectedStressOverride;
+            _clearAllStress.clicked += ClearAllStressOverrides;
 
             RootElement.RegisterCallback<PointerEnterEvent>(OnWindowPointerEnter);
             RootElement.RegisterCallback<PointerLeaveEvent>(OnWindowPointerLeave);
@@ -200,7 +214,7 @@ namespace DebugTools.Runtime.Controllers
             _jointSummary!.text =
                 $"Mode:<b>{snapshot?.Mode.ToString() ?? "Unavailable"}</b>  Analytical:<b>{(snapshot?.ConnectionCount ?? 0):0}</b>  Legacy:<b>{legacyConnections:0}</b>  PhysX CJ:<b>{configJoints:0}</b>  RB owner/parts:<b>{ownerRb:0}/{partRootRb:0}</b>";
             _stressSummary!.text =
-                $"Max:<b>{JointDebugState.FormatPercent(snapshot?.MaximumUtilization ?? 0f)}</b>  Graph:<b>{(snapshot?.GraphValid == true ? "valid" : "rebuilding")}</b>  Selected:<b>{JointDebugState.SelectedConnectionId ?? "none"}</b>";
+                $"Max:<b>{JointDebugState.FormatPercent(snapshot?.MaximumUtilization ?? 0f)}</b>  Solved:<b>{JointDebugState.FormatPercent(snapshot?.SolvedMaximumUtilization ?? 0f)}</b>  Override:<b>{(snapshot?.PresentationStressOverrideActive == true ? "active" : "off")}</b>  Graph:<b>{(snapshot?.GraphValid == true ? "valid" : "rebuilding")}</b>  Selected:<b>{JointDebugState.SelectedConnectionId ?? "none"}</b>";
             _mode!.text = _activeVessel.Physics == PhysicsMode.RigidBody
                 ? $"RigidBody Mode: <b>{(_activeBehavior.IsUnpacked() ? "Unpacked" : "Packed")}</b>"
                 : "RigidBody Mode: n/a";
@@ -250,6 +264,45 @@ namespace DebugTools.Runtime.Controllers
 
             SortModels(_models);
             SyncRows(_models);
+        }
+
+        private JointRowModel GetSelectedAnalyticalRow()
+        {
+            return _models.FirstOrDefault(model => model.IsAnalytical &&
+                model.Id == JointDebugState.SelectedConnectionId);
+        }
+
+        private void SetSelectedStressOverride()
+        {
+            JointRowModel selected = GetSelectedAnalyticalRow();
+            if (_activeBehavior?.PartOwner == null || selected == null) return;
+            StructuralPhysicsService.SetPresentationStressOverride(_activeBehavior.PartOwner,
+                selected.StructuralConnectionId, Mathf.Clamp01(_stressOverrideValue.value), out _);
+            _forceRebuild = true;
+        }
+
+        private void SetAllStressOverride()
+        {
+            if (_activeBehavior?.PartOwner == null) return;
+            StructuralPhysicsService.SetPresentationStressOverride(_activeBehavior.PartOwner,
+                null, Mathf.Clamp01(_stressOverrideValue.value), out _);
+            _forceRebuild = true;
+        }
+
+        private void ClearSelectedStressOverride()
+        {
+            JointRowModel selected = GetSelectedAnalyticalRow();
+            if (_activeBehavior?.PartOwner == null || selected == null) return;
+            StructuralPhysicsService.ClearPresentationStressOverride(_activeBehavior.PartOwner,
+                selected.StructuralConnectionId, out _);
+            _forceRebuild = true;
+        }
+
+        private void ClearAllStressOverrides()
+        {
+            if (_activeBehavior?.PartOwner == null) return;
+            StructuralPhysicsService.ClearPresentationStressOverride(_activeBehavior.PartOwner, null, out _);
+            _forceRebuild = true;
         }
 
         private static void SortModels(List<JointRowModel> models)
@@ -476,6 +529,7 @@ namespace DebugTools.Runtime.Controllers
         private sealed class JointRowModel
         {
             public string Id;
+            public string StructuralConnectionId;
             public string Kind;
             public string VesselName;
             public string ParentName;
@@ -508,6 +562,7 @@ namespace DebugTools.Runtime.Controllers
                 return new JointRowModel
                 {
                     Id = JointDebugState.BuildAnalyticalId(vessel, connection),
+                    StructuralConnectionId = connection.Id,
                     Kind = "Analytical",
                     VesselName = vessel.DisplayName,
                     ParentName = string.IsNullOrEmpty(connection.ParentName) ? "<none>" : connection.ParentName,
