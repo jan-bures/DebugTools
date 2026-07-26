@@ -5,8 +5,8 @@ using KSP.Game;
 using KSP.Rendering;
 using KSP.Sim;
 using KSP.Sim.impl;
-using IGUtils;
 using Redux.Ecs.Structural;
+using DebugTools.Utils;
 using UnityEngine;
 
 // ReSharper disable once CheckNamespace
@@ -24,7 +24,6 @@ namespace DebugTools.Runtime.Controllers
         private static bool _showAnalytical = true;
         private static bool _showLegacy;
         private static bool _showMarkers;
-        private static bool _showStressGauges = true;
         private static JointDebugSortMode _sortMode = JointDebugSortMode.MaxUtilization;
         private static string _hoveredConnectionId;
         private static string _selectedConnectionId;
@@ -35,7 +34,7 @@ namespace DebugTools.Runtime.Controllers
         public static bool ShowAnalytical => _showAnalytical;
         public static bool ShowLegacy => _showLegacy;
         public static bool ShowMarkers => _showMarkers;
-        public static bool ShowStressGauges => _showStressGauges;
+        public static bool ShowStressGauges => Configuration.StructuralStressGauges?.Value ?? false;
         public static JointDebugSortMode SortMode => _sortMode;
         public static string HoveredConnectionId => _hoveredConnectionId;
         public static string SelectedConnectionId => _selectedConnectionId;
@@ -74,8 +73,8 @@ namespace DebugTools.Runtime.Controllers
 
         public static void SetShowStressGauges(bool value)
         {
-            if (_showStressGauges == value) return;
-            _showStressGauges = value;
+            if (ShowStressGauges == value) return;
+            Configuration.StructuralStressGauges.Value = value;
             PhysicsSettings.STRUCTURAL_STRESS_GAUGES_ENABLED = value;
             NotifyChanged();
         }
