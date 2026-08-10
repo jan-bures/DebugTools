@@ -20,7 +20,7 @@ struct appdata
 };
 
 #if _USE_PQS_BUFFER
-Buffer<uint> VisibleQuadMeshIndices;
+StructuredBuffer<uint> VisibleQuadMeshIndices;
 StructuredBuffer<QuadMeshData> QuadMeshDataBuffer;
 #endif
 
