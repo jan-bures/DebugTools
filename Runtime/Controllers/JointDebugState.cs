@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DebugShapes;
 using KSP.Game;
 using KSP.Rendering;
 using KSP.Sim;
@@ -113,7 +114,8 @@ namespace DebugTools.Runtime.Controllers
             return $"{vessel.SimulationObject.GlobalId}:analytical:{connection.Id}";
         }
 
-        public static string BuildLegacyId(VesselComponent vessel, PartOwnerBehavior.JointConnection connection, int index)
+        public static string BuildLegacyId(VesselComponent vessel, PartOwnerBehavior.JointConnection connection,
+            int index)
         {
             string host = connection.host?.Model?.GlobalId.ToString() ?? connection.host?.Name ?? "host";
             string target = connection.target?.Model?.GlobalId.ToString() ?? connection.target?.Name ?? "target";
@@ -214,6 +216,7 @@ namespace DebugTools.Runtime.Controllers
             {
                 return null;
             }
+
             return owner.GetPartViewComponent(part);
         }
 
@@ -301,6 +304,7 @@ namespace DebugTools.Runtime.Controllers
                 {
                     continue;
                 }
+
                 foreach (StructuralConnectionSnapshot connection in snapshot.Connections)
                 {
                     string id = JointDebugState.BuildAnalyticalId(vessel, connection);
@@ -326,17 +330,21 @@ namespace DebugTools.Runtime.Controllers
 
         private Marker CreateMarker(string id)
         {
-            GameObject markerObject = new($"JointMarker_{id}");
-            markerObject.transform.SetParent(transform, false);
-            DebugShapesDraw.Sphere sphere = markerObject.AddComponent<DebugShapesDraw.Sphere>();
-            sphere.enabled = true;
-            sphere.sphereRadius = 0.1f;
-            sphere.color = Color.green;
+            var markerObject = new GameObject($"JointMarker_{id}");
+            markerObject.transform.SetParent(transform);
 
-            DebugShapesDraw.Sphere outline = markerObject.AddComponent<DebugShapesDraw.Sphere>();
-            outline.enabled = false;
-            outline.sphereRadius = 0.12f;
-            outline.color = Color.white;
+            var sphere = new DebugSphere(
+                $"JointMarker_{id}", markerObject.transform, Color.green, Vector3.zero, 0.1f)
+            {
+                Enabled = true
+            };
+
+            var outline = new DebugSphere(
+                $"JointMarker_{id}_Outline", markerObject.transform, Color.white, Vector3.zero, 0.12f)
+            {
+                Enabled = false
+            };
+
             return new Marker(id, markerObject, sphere, outline);
         }
 
@@ -359,20 +367,20 @@ namespace DebugTools.Runtime.Controllers
             }
 
             marker.CurrentRadius = radius;
-            marker.Sphere.enabled = true;
-            marker.Sphere.sphereRadius = radius;
-            marker.Sphere.color = color;
-            marker.Sphere.UpdatePosition(marker.Center);
+            marker.Sphere.Enabled = true;
+            marker.Sphere.Radius = radius;
+            marker.Sphere.Color = color;
+            marker.Sphere.Center = marker.Center;
 
             bool showOutline = isSelected || isHovered;
-            marker.OutlineSphere.enabled = showOutline;
+            marker.OutlineSphere.Enabled = showOutline;
             if (showOutline)
             {
-                marker.OutlineSphere.sphereRadius = radius * 1.18f;
-                marker.OutlineSphere.color = isSelected
+                marker.OutlineSphere.Radius = radius * 1.18f;
+                marker.OutlineSphere.Color = isSelected
                     ? new Color(0.2f, 1f, 1f, 0.75f)
                     : new Color(1f, 1f, 1f, 0.65f);
-                marker.OutlineSphere.UpdatePosition(marker.Center);
+                marker.OutlineSphere.Center = marker.Center;
             }
         }
 
@@ -434,9 +442,9 @@ namespace DebugTools.Runtime.Controllers
                 int visualIndex = 0;
                 if (connection.Joints == null)
                 {
-                    foreach (DebugShapesDraw.Sphere sphere in connection.visualJoints)
+                    foreach (var sphere in connection.visualJoints)
                     {
-                        if (sphere != null) sphere.enabled = false;
+                        if (sphere != null) sphere.Enabled = false;
                     }
 
                     continue;
@@ -445,20 +453,20 @@ namespace DebugTools.Runtime.Controllers
                 foreach (ConfigurableJoint joint in connection.Joints)
                 {
                     if (visualIndex >= connection.visualJoints.Length) break;
-                    DebugShapesDraw.Sphere sphere = connection.visualJoints[visualIndex++];
+                    var sphere = connection.visualJoints[visualIndex++];
                     if (sphere == null) continue;
 
-                    sphere.enabled = enabled && joint != null && joint.connectedBody != null;
-                    if (sphere.enabled)
+                    sphere.Enabled = enabled && joint != null && joint.connectedBody != null;
+                    if (sphere.Enabled)
                     {
-                        sphere.UpdatePosition(joint.connectedBody.transform.TransformPoint(joint.connectedAnchor));
+                        sphere.Center = joint.connectedBody.transform.TransformPoint(joint.connectedAnchor);
                     }
                 }
 
                 while (visualIndex < connection.visualJoints.Length)
                 {
-                    DebugShapesDraw.Sphere sphere = connection.visualJoints[visualIndex++];
-                    if (sphere != null) sphere.enabled = false;
+                    var sphere = connection.visualJoints[visualIndex++];
+                    if (sphere != null) sphere.Enabled = false;
                 }
             }
         }
@@ -484,7 +492,8 @@ namespace DebugTools.Runtime.Controllers
 
             foreach (Marker marker in _markers.Values)
             {
-                if (!RaySphere(ray, marker.Center, Mathf.Max(marker.CurrentRadius, 0.18f), out float distance)) continue;
+                if (!RaySphere(ray, marker.Center, Mathf.Max(marker.CurrentRadius, 0.18f), out float distance))
+                    continue;
                 if (distance < bestDistance)
                 {
                     bestDistance = distance;
@@ -567,8 +576,8 @@ namespace DebugTools.Runtime.Controllers
         {
             public readonly string Id;
             public readonly GameObject GameObject;
-            public readonly DebugShapesDraw.Sphere Sphere;
-            public readonly DebugShapesDraw.Sphere OutlineSphere;
+            public readonly DebugSphere Sphere;
+            public readonly DebugSphere OutlineSphere;
             public StructuralConnectionSnapshot Connection;
             public PartBehavior Parent;
             public PartBehavior Child;
@@ -579,8 +588,8 @@ namespace DebugTools.Runtime.Controllers
             public Marker(
                 string id,
                 GameObject gameObject,
-                DebugShapesDraw.Sphere sphere,
-                DebugShapesDraw.Sphere outlineSphere
+                DebugSphere sphere,
+                DebugSphere outlineSphere
             )
             {
                 Id = id;

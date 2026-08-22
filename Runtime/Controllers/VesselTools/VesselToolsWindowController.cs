@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DebugShapes;
 using DebugTools.Utils;
 using KSP.Game;
 using KSP.Messages;
@@ -16,12 +17,6 @@ namespace DebugTools.Runtime.Controllers.VesselTools
     public class VesselToolsWindowController : BaseWindowController
     {
         private bool _initialized;
-
-        // Debug shapes prefabs
-        private const string PrefabPath = "Assets/Modules/DebugTools/Assets/";
-
-        private DebugShapesArrowComponent? _debugArrowPrefab;
-        private DebugShapesAxesComponent? _debugAxesPrefab;
 
         // Stats windows
         private Toggle? _thermalDataToggle;
@@ -42,7 +37,7 @@ namespace DebugTools.Runtime.Controllers.VesselTools
 
         // Flight axes
         private Toggle? _showControlPoints;
-        private readonly List<DebugShapesAxesComponent> _vesselControlAxes = new();
+        private readonly List<DebugAxes> _vesselControlAxes = new();
         private bool _isControlPointsShowing;
 
         private Toggle? _cpNavballRotation;
@@ -50,12 +45,12 @@ namespace DebugTools.Runtime.Controllers.VesselTools
         private bool _isControlPointsRotated = true;
 
         private Toggle? _showSASTargets;
-        private readonly List<DebugShapesArrowComponent> _vesselSASArrows = new();
+        private readonly List<DebugArrow> _vesselSASArrows = new();
         private readonly Color _sasActiveColor = new(0.6f, 0f, 0.6f);
         private bool _isSASTargetsShowing;
 
         private Toggle? _showOrbitPoints;
-        private readonly List<DebugShapesAxesComponent> _vesselOrbitAxes = new();
+        private readonly List<DebugAxes> _vesselOrbitAxes = new();
         private bool _isOrbitPointsShowing;
 
         // Joints
@@ -72,7 +67,7 @@ namespace DebugTools.Runtime.Controllers.VesselTools
 
         // Misc
         private Toggle? _showCoMMarkers;
-        private readonly List<DebugShapesSphereMarker> _comMarkers = new();
+        private readonly List<DebugSphere> _comMarkers = new();
         private Slider? _markerSize;
 
         private Toggle? _showPhysicsForce;
@@ -148,8 +143,6 @@ namespace DebugTools.Runtime.Controllers.VesselTools
         {
             Enable();
 
-            LoadPrefabs();
-
             // Stats windows
             InitThermalData();
             InitMassStats();
@@ -223,15 +216,6 @@ namespace DebugTools.Runtime.Controllers.VesselTools
         private void OnDisable()
         {
             JointDebugState.Changed -= OnJointDebugStateChanged;
-        }
-
-        private void LoadPrefabs()
-        {
-            GameManager.Instance.Assets.Load<GameObject>(PrefabPath + "DebugArrow.prefab",
-                obj => { _debugArrowPrefab = obj.GetComponent<DebugShapesArrowComponent>(); });
-
-            GameManager.Instance.Assets.Load<GameObject>(PrefabPath + "DebugAxes.prefab",
-                obj => { _debugAxesPrefab = obj.GetComponent<DebugShapesAxesComponent>(); });
         }
 
         private void InitThermalData()
@@ -320,9 +304,9 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             UpdateMassStats();
             UpdateManeuvers();
             UpdateCoords();
-            
+
             if (!IsWindowOpen) return;
-            
+
             UpdateVesselsCoM();
 
             if (_state == GameState.FlightView || _state == GameState.Map3DView)
@@ -461,19 +445,12 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             foreach (var vessel in _vessels)
             {
                 var behavior = _view.GetBehaviorIfLoaded(vessel);
-                if (behavior == null || _debugAxesPrefab == null) continue;
+                if (behavior == null) continue;
 
-                var axes = Instantiate(_debugAxesPrefab.gameObject, behavior.transform)
-                    .GetComponent<DebugShapesAxesComponent>();
-
-                axes.arrowLineLength = 2f;
-                if (axes.tracker != null)
-                {
-                    axes.tracker.RotationOffset = _isControlPointsRotated ? _navballRotation : Quaternion.identity;
-                    axes.tracker.Setup(vessel.SimulationObject, "Control", true);
-                    axes.tracker.OnUpdate += UpdateVesselControl;
-                }
-
+                var axes = new DebugAxes(vessel.DisplayName + "_Ctrl", behavior.transform, Vector3.zero, 2f, 0.15f,
+                    Color.blue, Color.green, Color.red);
+                axes.SetupTracker(vessel.SimulationObject, UpdateVesselControl, true);
+                axes.Tracker.RotationOffset = _isControlPointsRotated ? _navballRotation : Quaternion.identity;
                 _vesselControlAxes.Add(axes);
             }
         }
@@ -483,11 +460,7 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             var count = _vesselControlAxes.Count;
             while (count-- > 0)
             {
-                _vesselControlAxes[count].tracker.OnUpdate -= UpdateVesselControl;
-
-                if (_vesselControlAxes[count].gameObject != null)
-                    Destroy(_vesselControlAxes[count].gameObject);
-
+                _vesselControlAxes[count].Destroy(UpdateVesselControl);
                 _vesselControlAxes.RemoveAt(count);
             }
 
@@ -508,7 +481,7 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             if (evt.newValue == _isControlPointsRotated) return;
 
             foreach (var axis in _vesselControlAxes)
-                axis.tracker.RotationOffset = evt.newValue ? _navballRotation : Quaternion.identity;
+                axis.Tracker.RotationOffset = evt.newValue ? _navballRotation : Quaternion.identity;
 
             _isControlPointsRotated = evt.newValue;
         }
@@ -536,30 +509,14 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             foreach (var vessel in _vessels)
             {
                 var behavior = _view.GetBehaviorIfLoaded(vessel);
-                if (behavior == null || _debugArrowPrefab == null) continue;
+                if (behavior == null) continue;
 
-                var arrow = Instantiate(_debugArrowPrefab.gameObject, behavior.transform)
-                    .GetComponent<DebugShapesArrowComponent>();
-                try
-                {
-                    arrow.color = _sasActiveColor;
-                    arrow.arrowLine.Dashed = true;
-                    arrow.arrowLine.DashSize = 0.5f;
-                    arrow.lineLength = 4f;
-                    if (arrow.tracker != null)
-                    {
-                        arrow.tracker.Setup(vessel.SimulationObject, "SAS", startTracking: true);
-                        arrow.tracker.RotationOffset = _navballRotation;
-                        arrow.tracker.OnUpdate += UpdateSASVectors;
-                    }
-
-                    _vesselSASArrows.Add(arrow);
-                }
-                catch
-                {
-                    if (arrow != null)
-                        Destroy(arrow.gameObject);
-                }
+                var arrow = new DebugArrow(vessel.DisplayName + "_SAS", behavior.transform, _sasActiveColor,
+                    Vector3.zero, Vector3.forward, 4f, 0.15f);
+                arrow.UseWorldSpace = false;
+                arrow.SetupTracker(vessel.SimulationObject, UpdateSASVectors, true); 
+                arrow.Tracker.RotationOffset = _navballRotation;
+                _vesselSASArrows.Add(arrow);
             }
         }
 
@@ -568,11 +525,7 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             var count = _vesselSASArrows.Count;
             while (count-- > 0)
             {
-                _vesselSASArrows[count].tracker.OnUpdate -= UpdateSASVectors;
-
-                if (_vesselSASArrows[count].gameObject != null)
-                    Destroy(_vesselSASArrows[count].gameObject);
-
+                _vesselSASArrows[count].Destroy(UpdateSASVectors);
                 _vesselSASArrows.RemoveAt(count);
             }
 
@@ -778,30 +731,12 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             foreach (var vessel in _vessels)
             {
                 var behavior = _view.GetBehaviorIfLoaded(vessel);
-                if (!(behavior != null) || !(_debugAxesPrefab != null)) continue;
+                if (!(behavior != null)) continue;
 
-                var component = Instantiate(_debugAxesPrefab.gameObject, behavior.transform)
-                    .GetComponent<DebugShapesAxesComponent>();
-                try
-                {
-                    component.arrowLineLength = 2f;
-                    component.forwardColor = Color.green;
-                    component.upColor = Color.magenta;
-                    component.rightColor = Color.cyan;
-                    if (component.tracker != null)
-                    {
-                        component.tracker.Setup(vessel.SimulationObject, "Horizon", startTracking: true);
-                        component.tracker.OnUpdate += Tracker_OnUpdate;
-                        component.tracker.UpdateTransform();
-                    }
-
-                    _vesselOrbitAxes.Add(component);
-                }
-                catch
-                {
-                    if (component != null)
-                        Destroy(component.gameObject);
-                }
+                var axes = new DebugAxes(vessel.DisplayName + "_Orbit", behavior.transform, Vector3.zero, 2f, 0.15f,
+                    Color.green, Color.magenta, Color.cyan);
+                axes.SetupTracker(vessel.SimulationObject, Tracker_OnUpdate, true);
+                _vesselOrbitAxes.Add(axes);
             }
         }
 
@@ -810,11 +745,7 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             var count = _vesselOrbitAxes.Count;
             while (count-- > 0)
             {
-                _vesselOrbitAxes[count].tracker.OnUpdate -= Tracker_OnUpdate;
-
-                if (_vesselOrbitAxes[count].gameObject != null)
-                    Destroy(_vesselOrbitAxes[count].gameObject);
-
+                _vesselOrbitAxes[count].Destroy(Tracker_OnUpdate);
                 _vesselOrbitAxes.RemoveAt(count);
             }
 
@@ -949,9 +880,9 @@ namespace DebugTools.Runtime.Controllers.VesselTools
                     var sphere = connection.visualJoints[num++];
                     if (sphere == null) continue;
 
-                    sphere.enabled = _showJoints!.value;
-                    if (sphere.enabled)
-                        sphere.UpdatePosition(joint.connectedBody.transform.TransformPoint(joint.connectedAnchor));
+                    sphere.Enabled = _showJoints!.value;
+                    if (sphere.Enabled)
+                        sphere.Center = joint.connectedBody.transform.TransformPoint(joint.connectedAnchor);
                 }
             }
         }
@@ -980,12 +911,10 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             _vessels = _view.Universe.GetAllVessels();
             foreach (var vessel in _vessels)
             {
-                var markerObject = new GameObject(vessel.Name + "_CoM");
-                markerObject.transform.parent = Window.transform;
-
-                var marker = markerObject.AddComponent<DebugShapesSphereMarker>();
-                marker.SetRadius(1f);
-                marker.SetEnabled(_showCoMMarkers?.value ?? false);
+                var marker = new DebugSphere(vessel.Name + "_CoM", Window.transform, Color.yellow, Vector3.zero, 1f)
+                {
+                    Enabled = _showCoMMarkers?.value ?? false
+                };
 
                 _comMarkers.Add(marker);
             }
@@ -1006,9 +935,9 @@ namespace DebugTools.Runtime.Controllers.VesselTools
             var i = 0;
             foreach (var vessel in _vessels)
             {
-                _comMarkers[i].SetEnabled(_showCoMMarkers.value);
-                _comMarkers[i].SetCenter(Game.UniverseView.PhysicsSpace.PositionToPhysics(vessel.CenterOfMass));
-                _comMarkers[i].SetRadius(_markerSize.value);
+                _comMarkers[i].Enabled = _showCoMMarkers.value;
+                _comMarkers[i].Center = Game.UniverseView.PhysicsSpace.PositionToPhysics(vessel.CenterOfMass);
+                _comMarkers[i].Radius = _markerSize.value;
                 ++i;
             }
         }
