@@ -17,6 +17,8 @@ namespace DebugTools.Runtime.Controllers
         // The PanelRenderer component of the window game object
         private PanelRenderer _window;
 
+        private MessageCenter _messageCenter;
+
         // The elements of the window that we need to access
         private VisualElement _rootElement;
         private VisualElement _content;
@@ -43,7 +45,17 @@ namespace DebugTools.Runtime.Controllers
 
         private void Awake()
         {
-            Game.Messages.Subscribe<GameStateEnteredMessage>(OnGameStateEntered);
+            _messageCenter = Game.Messages;
+            // The window survives campaign shutdown, so its state subscription must survive too (#1427).
+            _messageCenter.PersistentSubscribe<GameStateEnteredMessage>(OnGameStateEntered);
+        }
+
+        private void OnDestroy()
+        {
+            if (_messageCenter != null)
+            {
+                _messageCenter.Unsubscribe<GameStateEnteredMessage>(OnGameStateEntered);
+            }
         }
 
         /// <summary>

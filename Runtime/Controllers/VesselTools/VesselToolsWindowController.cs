@@ -88,11 +88,24 @@ namespace DebugTools.Runtime.Controllers.VesselTools
 
         private bool _ignoreValueChanged;
 
+        private MessageCenter _messageCenter;
+
         private void Awake()
         {
-            Game.Messages.Subscribe<GameStateChangedMessage>(OnStateChanged);
-            Game.Messages.Subscribe<GameLoadFinishedMessage>(OnStateChanged);
+            _messageCenter = Game.Messages;
+            // Keep vessel and thermal data updating after a campaign is unloaded and loaded again (#1427).
+            _messageCenter.PersistentSubscribe<GameStateChangedMessage>(OnStateChanged);
+            _messageCenter.PersistentSubscribe<GameLoadFinishedMessage>(OnStateChanged);
             Refresh();
+        }
+
+        private void OnDestroy()
+        {
+            if (_messageCenter != null)
+            {
+                _messageCenter.Unsubscribe<GameStateChangedMessage>(OnStateChanged);
+                _messageCenter.Unsubscribe<GameLoadFinishedMessage>(OnStateChanged);
+            }
         }
 
         private void OnStateChanged(MessageCenterMessage msg)
